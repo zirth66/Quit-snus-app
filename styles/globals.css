@@ -345,3 +345,15 @@ body {
   gap: 1rem;
   margin-top: 2rem;
 }
+
+.loading-container {
+  min-height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+}

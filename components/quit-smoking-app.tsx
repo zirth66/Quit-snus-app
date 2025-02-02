@@ -4,6 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Timer, Trophy, Star, Settings } from 'lucide-react';
 
+interface AppState {
+  timeLeft: number | null;
+  currentStreak: number;
+  dayCount: number;
+  dailyLimit: number;
+  usagesLeft: number;
+  xpPoints: number;
+  lastUsageDate: string;
+  canEarnXp: boolean;
+}
+
 const QuitApp = () => {
   const INITIAL_DAILY_LIMIT = 10;
   const WAKE_HOURS = 16;
@@ -20,17 +31,39 @@ const QuitApp = () => {
   const [canEarnXp, setCanEarnXp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsLimit, setSettingsLimit] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Add at the top of the component
+  // Load state from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('snusSettings');
-    if (saved) {
-      const settings = JSON.parse(saved);
-      setSettingsLimit(settings.initialLimit);
-      setDailyLimit(settings.initialLimit);
-      setUsagesLeft(settings.initialLimit);
+    const savedState = localStorage.getItem('appState');
+    if (savedState) {
+      const state: AppState = JSON.parse(savedState);
+      setTimeLeft(state.timeLeft);
+      setCurrentStreak(state.currentStreak);
+      setDayCount(state.dayCount);
+      setDailyLimit(state.dailyLimit);
+      setUsagesLeft(state.usagesLeft);
+      setXpPoints(state.xpPoints);
+      setLastUsageDate(state.lastUsageDate);
+      setCanEarnXp(state.canEarnXp);
     }
+    setIsLoading(false);
   }, []);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    const state: AppState = {
+      timeLeft,
+      currentStreak,
+      dayCount,
+      dailyLimit,
+      usagesLeft,
+      xpPoints,
+      lastUsageDate,
+      canEarnXp
+    };
+    localStorage.setItem('appState', JSON.stringify(state));
+  }, [timeLeft, currentStreak, dayCount, dailyLimit, usagesLeft, xpPoints, lastUsageDate, canEarnXp]);
 
   // Remove getWaitTime from component scope
   const handleUsage = () => {
@@ -44,24 +77,40 @@ const QuitApp = () => {
         setCurrentStreak(0);
       }
 
-      // Calculate wait time directly here
       const minutesBetweenUses = (WAKE_HOURS * 60) / dailyLimit;
-      const waitTime = Math.floor(minutesBetweenUses * 60);
+      const waitTimeInSeconds = Math.floor(minutesBetweenUses * 60);
+      const nextUsageTimestamp = Date.now() + (waitTimeInSeconds * 1000);
       
-      setTimeLeft(waitTime);
+      localStorage.setItem('nextUsageTimestamp', nextUsageTimestamp.toString());
+      setTimeLeft(waitTimeInSeconds);
       setCanEarnXp(false);
       setLastUsageDate(new Date().toDateString());
     }
   };
 
+  // Update the timer useEffect to use timestamps
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (timeLeft && timeLeft > 0) {
+    if (timeLeft !== null) {
+      const nextUsageTimestamp = localStorage.getItem('nextUsageTimestamp');
+      if (nextUsageTimestamp) {
+        const remainingTime = Math.ceil((parseInt(nextUsageTimestamp) - Date.now()) / 1000);
+        if (remainingTime > 0) {
+          setTimeLeft(remainingTime);
+        } else {
+          setTimeLeft(null);
+          setCanEarnXp(true);
+          localStorage.removeItem('nextUsageTimestamp');
+          return;
+        }
+      }
+
       interval = setInterval(() => {
         setTimeLeft(current => {
           if (!current || current <= 1) {
             setCanEarnXp(true);
+            localStorage.removeItem('nextUsageTimestamp');
             return null;
           }
           return current - 1;
@@ -178,89 +227,98 @@ const QuitApp = () => {
         >
           <Settings className="h-6 w-6" />
         </button>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <span className="stat-label">Dag</span>
-            <div className="stat-circle">
-              <div className="stat-content">
-                <span className="stat-value">{dayCount}</span>
+        
+        {isLoading ? (
+          <div className="loading-container">
+            <div className="loading">Laddar...</div>
+          </div>
+        ) : (
+          <>
+            <div className="stats-grid">
+              <div className="stat-item">
+                <span className="stat-label">Dag</span>
+                <div className="stat-circle">
+                  <div className="stat-content">
+                    <span className="stat-value">{dayCount}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Kvar</span>
+                <div className="stat-circle">
+                  <div className="stat-content">
+                    <span className="stat-value">{usagesLeft}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Streak</span>
+                <div className="stat-circle">
+                  <div className="stat-content">
+                    <span className="stat-value">{currentStreak}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">XP</span>
+                <div className="stat-circle">
+                  <div className="stat-content">
+                    <span className="stat-value">{xpPoints}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Kvar</span>
-            <div className="stat-circle">
-              <div className="stat-content">
-                <span className="stat-value">{usagesLeft}</span>
-              </div>
-            </div>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Streak</span>
-            <div className="stat-circle">
-              <div className="stat-content">
-                <span className="stat-value">{currentStreak}</span>
-              </div>
-            </div>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">XP</span>
-            <div className="stat-circle">
-              <div className="stat-content">
-                <span className="stat-value">{xpPoints}</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="circle-container">
-          <svg width="264" height="264">
-            {createSegments().map((segment, index) => (
-              <path
-                key={index}
-                d={segment.path}
-                stroke={segment.active ? "rgba(20,184,166,0.7)" : "rgba(0,0,0,0.1)"}
-                strokeWidth="8"
-                fill="none"
-              />
-            ))}
-          </svg>
-          <div className="circle-content">
-            <div>
-              {timeLeft === null ? (
-                <>
-                  {usagesLeft > 0 ? (
-                    <Button
-                      className="register-button"
-                      onClick={handleUsage}
-                    >
-                      Registrera
-                    </Button>
+            <div className="circle-container">
+              <svg width="264" height="264">
+                {createSegments().map((segment, index) => (
+                  <path
+                    key={index}
+                    d={segment.path}
+                    stroke={segment.active ? "rgba(20,184,166,0.7)" : "rgba(0,0,0,0.1)"}
+                    strokeWidth="8"
+                    fill="none"
+                  />
+                ))}
+              </svg>
+              <div className="circle-content">
+                <div>
+                  {timeLeft === null ? (
+                    <>
+                      {usagesLeft > 0 ? (
+                        <Button
+                          className="register-button"
+                          onClick={handleUsage}
+                        >
+                          Registrera
+                        </Button>
+                      ) : (
+                        <div className="daily-limit-reached">
+                          Dagens gräns nådd
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <div className="daily-limit-reached">
-                      Dagens gräns nådd
+                    <div className="countdown">
+                      <div className="time">{formatTime(timeLeft)}</div>
+                      <div className="label">till nästa</div>
                     </div>
                   )}
-                </>
-              ) : (
-                <div className="countdown">
-                  <div className="time">{formatTime(timeLeft)}</div>
-                  <div className="label">till nästa</div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="milestone-card">
-          <div className="milestone-header">
-            <Trophy className="icon" />
-            <div className="title">Nästa milstolpe</div>
-          </div>
-          <div className="milestone-text">
-            Efter 24 timmar: Ditt blodtryck börjar normaliseras och risken för hjärtproblem minskar.
-          </div>
-        </div>
+            <div className="milestone-card">
+              <div className="milestone-header">
+                <Trophy className="icon" />
+                <div className="title">Nästa milstolpe</div>
+              </div>
+              <div className="milestone-text">
+                Efter 24 timmar: Ditt blodtryck börjar normaliseras och risken för hjärtproblem minskar.
+              </div>
+            </div>
+          </>
+        )}
         <SettingsModal />
       </div>
     </div>
