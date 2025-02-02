@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Timer, Trophy, Star } from 'lucide-react';
+import { Timer, Trophy, Star, Settings } from 'lucide-react';
 
 const QuitApp = () => {
   const INITIAL_DAILY_LIMIT = 10;
   const WAKE_HOURS = 16;
   const XP_PER_WAIT = 10;
-  const BONUS_XP_PER_UNUSED = 20; // Bonus XP for each unused snus
 
   // Make sure all initial states are correct
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -19,8 +18,19 @@ const QuitApp = () => {
   const [xpPoints, setXpPoints] = useState(0);
   const [lastUsageDate, setLastUsageDate] = useState<string>(new Date().toDateString());
   const [canEarnXp, setCanEarnXp] = useState(false);
-  const [showBonus, setShowBonus] = useState(false);
-  const [bonusAmount, setBonusAmount] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsLimit, setSettingsLimit] = useState(10);
+
+  // Add at the top of the component
+  useEffect(() => {
+    const saved = localStorage.getItem('snusSettings');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      setSettingsLimit(settings.initialLimit);
+      setDailyLimit(settings.initialLimit);
+      setUsagesLeft(settings.initialLimit);
+    }
+  }, []);
 
   // Remove getWaitTime from component scope
   const handleUsage = () => {
@@ -65,34 +75,6 @@ const QuitApp = () => {
       }
     };
   }, [timeLeft]);
-
-  // Add check for day change and bonus calculation
-  useEffect(() => {
-    const checkNewDay = () => {
-      const today = new Date().toDateString();
-      if (today !== lastUsageDate) {
-        // Calculate bonus for unused snus from previous day
-        const unusedCount = usagesLeft;
-        if (unusedCount > 0) {
-          const bonus = unusedCount * BONUS_XP_PER_UNUSED;
-          setBonusAmount(bonus);
-          setShowBonus(true);
-          setXpPoints(prev => prev + bonus);
-          
-          // Reset for new day after applying bonus
-          const newLimit = Math.max(0, INITIAL_DAILY_LIMIT - dayCount);
-          setDailyLimit(newLimit);
-          setUsagesLeft(newLimit);
-          setDayCount(prev => prev + 1);
-        }
-        setLastUsageDate(today);
-      }
-    };
-
-    checkNewDay();
-    const interval = setInterval(checkNewDay, 60000);
-    return () => clearInterval(interval);
-  }, [lastUsageDate, usagesLeft, dayCount]);
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -139,24 +121,49 @@ const QuitApp = () => {
     return segments;
   };
 
-  // Add bonus display component
-  const BonusDisplay = () => {
-    if (!showBonus) return null;
+  const SettingsModal = () => {
+    if (!showSettings) return null;
+    
+    const handleSave = () => {
+      const settings = { initialLimit: settingsLimit };
+      localStorage.setItem('snusSettings', JSON.stringify(settings));
+      setDailyLimit(settingsLimit);
+      setUsagesLeft(settingsLimit);
+      setShowSettings(false);
+    };
+
+    const handleReset = () => {
+      if (confirm('Är du säker? Detta kommer nollställa all din progress.')) {
+        localStorage.clear();
+        setDailyLimit(10);
+        setUsagesLeft(10);
+        setCurrentStreak(0);
+        setDayCount(1);
+        setXpPoints(0);
+        setTimeLeft(null);
+        setShowSettings(false);
+      }
+    };
 
     return (
-      <div className="bonus-overlay" onClick={() => setShowBonus(false)}>
-        <div className="bonus-card">
-          <div className="bonus-header">
-            <Star className="icon" />
-            <h2>Daglig Bonus!</h2>
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <h2>Inställningar</h2>
+          <div className="setting-item">
+            <label>Antal snus per dag (start)</label>
+            <input 
+              type="number" 
+              value={settingsLimit}
+              onChange={(e) => setSettingsLimit(parseInt(e.target.value))}
+              min="1"
+              max="50"
+            />
           </div>
-          <div className="bonus-content">
-            <p>Du klarade dig med {usagesLeft} färre snus igår!</p>
-            <div className="bonus-xp">+{bonusAmount} XP</div>
+          <div className="modal-buttons">
+            <Button onClick={handleSave}>Spara</Button>
+            <Button variant="destructive" onClick={handleReset}>Nollställ</Button>
+            <Button onClick={() => setShowSettings(false)}>Stäng</Button>
           </div>
-          <Button onClick={() => setShowBonus(false)}>
-            Awesome!
-          </Button>
         </div>
       </div>
     );
@@ -164,7 +171,13 @@ const QuitApp = () => {
 
   return (
     <div className="container">
-      <div className="app-wrapper">
+      <div className="app-wrapper relative">
+        <button 
+          className="settings-button" 
+          onClick={() => setShowSettings(true)}
+        >
+          <Settings className="h-6 w-6" />
+        </button>
         <div className="stats-grid">
           <div className="stat-item">
             <span className="stat-label">Dag</span>
@@ -248,8 +261,8 @@ const QuitApp = () => {
             Efter 24 timmar: Ditt blodtryck börjar normaliseras och risken för hjärtproblem minskar.
           </div>
         </div>
+        <SettingsModal />
       </div>
-      <BonusDisplay />
     </div>
   );
 };

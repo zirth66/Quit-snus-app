@@ -288,78 +288,69 @@ body {
   background: rgba(236, 72, 153, 0.1);
 }
 
-.bonus-overlay {
+.settings-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.8rem;
+  border-radius: 50%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--white-transparent);
+}
+
+.settings-button:hover {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  -webkit-backdrop-filter: blur(4px);
-          backdrop-filter: blur(4px);
+  z-index: 100;
 }
 
-.bonus-card {
+.modal-content {
   background: white;
   padding: 2rem;
   border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  max-width: 90%;
-  width: 400px;
-  text-align: center;
-  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  width: 90%;
+  max-width: 400px;
 }
 
-.bonus-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.bonus-header .icon {
-  color: #f59e0b;
-  width: 2rem;
-  height: 2rem;
-}
-
-.bonus-header h2 {
-  color: #1f2937;
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.bonus-content {
-  margin: 1.5rem 0;
-}
-
-.bonus-xp {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #10b981;
+.setting-item {
   margin: 1rem 0;
-  animation: pulseScale 1s infinite;
 }
 
-@keyframes bounceIn {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  70% { transform: scale(0.9); }
-  100% { transform: scale(1); }
+.setting-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
 }
 
-@keyframes pulseScale {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+.setting-item input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
 }
