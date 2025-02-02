@@ -146,32 +146,220 @@ body {
   transform: none;
 }
 
+.countdown {
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.countdown .time {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.countdown .label {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.daily-limit-reached {
+  margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
 .stats-container {
   display: flex;
   justify-content: space-between;
-  padding: 16px;
+  padding: 1rem;
   background: var(--white-transparent);
   -webkit-backdrop-filter: blur(8px);
           backdrop-filter: blur(8px);
   border-radius: 1rem;
-  margin-bottom: 16px;
+  margin-bottom: 1.5rem;
 }
 
 .stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex: 1 1;
   text-align: center;
 }
 
 .stat-label {
   font-size: 0.875rem;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap: 1.5rem;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 0 1rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-circle {
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--white-transparent);
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.stat-circle:hover {
+  transform: translateY(-2px);
+}
+
+.stat-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stat-value {
   font-size: 1.25rem;
   font-weight: bold;
   color: var(--text-primary);
-} 
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Make stats responsive */
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    padding: 0 0.5rem;
+  }
+
+  .stat-circle {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .stat-value {
+    font-size: 1.125rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Optional: Add some color variations */
+.stat-item:nth-child(1) .stat-circle {
+  background: rgba(20, 184, 166, 0.1);
+}
+
+.stat-item:nth-child(2) .stat-circle {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.stat-item:nth-child(3) .stat-circle {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.stat-item:nth-child(4) .stat-circle {
+  background: rgba(236, 72, 153, 0.1);
+}
+
+.bonus-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  -webkit-backdrop-filter: blur(4px);
+          backdrop-filter: blur(4px);
+}
+
+.bonus-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 90%;
+  width: 400px;
+  text-align: center;
+  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.bonus-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.bonus-header .icon {
+  color: #f59e0b;
+  width: 2rem;
+  height: 2rem;
+}
+
+.bonus-header h2 {
+  color: #1f2937;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.bonus-content {
+  margin: 1.5rem 0;
+}
+
+.bonus-xp {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #10b981;
+  margin: 1rem 0;
+  animation: pulseScale 1s infinite;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulseScale {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}

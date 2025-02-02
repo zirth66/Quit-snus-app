@@ -6,57 +6,57 @@ import { Timer, Trophy, Star } from 'lucide-react';
 
 const QuitApp = () => {
   const INITIAL_DAILY_LIMIT = 10;
-  const WAKE_HOURS = 16; // 16 hours of wake time
+  const WAKE_HOURS = 16;
+  const XP_PER_WAIT = 10;
+  const BONUS_XP_PER_UNUSED = 20; // Bonus XP for each unused snus
 
+  // Make sure all initial states are correct
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [currentStreak, setCurrentStreak] = useState(0);
-  const [xpPoints, setXpPoints] = useState(0);
   const [dayCount, setDayCount] = useState(1);
   const [dailyLimit, setDailyLimit] = useState(INITIAL_DAILY_LIMIT);
   const [usagesLeft, setUsagesLeft] = useState(INITIAL_DAILY_LIMIT);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
+  const [xpPoints, setXpPoints] = useState(0);
   const [lastUsageDate, setLastUsageDate] = useState<string>(new Date().toDateString());
+  const [canEarnXp, setCanEarnXp] = useState(false);
+  const [showBonus, setShowBonus] = useState(false);
+  const [bonusAmount, setBonusAmount] = useState(0);
 
-  // Calculate wait time based on remaining uses and wake hours
-  const getWaitTime = () => {
-    const minutesBetweenUses = (WAKE_HOURS * 60) / dailyLimit;
-    return Math.floor(minutesBetweenUses * 60); // Convert to seconds
+  // Remove getWaitTime from component scope
+  const handleUsage = () => {
+    if (usagesLeft > 0) {
+      setUsagesLeft(prev => prev - 1);
+      
+      if (canEarnXp) {
+        setXpPoints(prev => prev + XP_PER_WAIT);
+        setCurrentStreak(prev => prev + 1);
+      } else {
+        setCurrentStreak(0);
+      }
+
+      // Calculate wait time directly here
+      const minutesBetweenUses = (WAKE_HOURS * 60) / dailyLimit;
+      const waitTime = Math.floor(minutesBetweenUses * 60);
+      
+      setTimeLeft(waitTime);
+      setCanEarnXp(false);
+      setLastUsageDate(new Date().toDateString());
+    }
   };
 
-  // Check for new day
-  useEffect(() => {
-    const checkNewDay = () => {
-      const today = new Date().toDateString();
-      if (today !== lastUsageDate) {
-        setDayCount(prev => prev + 1);
-        const newLimit = Math.max(0, INITIAL_DAILY_LIMIT - (dayCount));
-        setDailyLimit(newLimit);
-        setUsagesLeft(newLimit);
-        setLastUsageDate(today);
-      }
-    };
-
-    checkNewDay();
-    const interval = setInterval(checkNewDay, 60000);
-    return () => clearInterval(interval);
-  }, [lastUsageDate, dayCount]);
-
-  // Timer countdown
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (isRunning && timeLeft > 0) {
+    if (timeLeft && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft(time => {
-          if (time <= 0) {
-            setIsRunning(false);
-            return 0;
+        setTimeLeft(current => {
+          if (!current || current <= 1) {
+            setCanEarnXp(true);
+            return null;
           }
-          return time - 1;
+          return current - 1;
         });
       }, 1000);
-    } else if (timeLeft === 0) {
-      setIsRunning(false);
     }
 
     return () => {
@@ -64,18 +64,35 @@ const QuitApp = () => {
         clearInterval(interval);
       }
     };
-  }, [isRunning, timeLeft]);
+  }, [timeLeft]);
 
-  const handleUsage = () => {
-    if (usagesLeft > 0 && !isRunning) {
-      setUsagesLeft(prev => prev - 1);
-      setXpPoints(prev => prev + 10);
-      setCurrentStreak(prev => prev + 1);
-      setTimeLeft(getWaitTime());
-      setIsRunning(true);
-      setLastUsageDate(new Date().toDateString());
-    }
-  };
+  // Add check for day change and bonus calculation
+  useEffect(() => {
+    const checkNewDay = () => {
+      const today = new Date().toDateString();
+      if (today !== lastUsageDate) {
+        // Calculate bonus for unused snus from previous day
+        const unusedCount = usagesLeft;
+        if (unusedCount > 0) {
+          const bonus = unusedCount * BONUS_XP_PER_UNUSED;
+          setBonusAmount(bonus);
+          setShowBonus(true);
+          setXpPoints(prev => prev + bonus);
+          
+          // Reset for new day after applying bonus
+          const newLimit = Math.max(0, INITIAL_DAILY_LIMIT - dayCount);
+          setDailyLimit(newLimit);
+          setUsagesLeft(newLimit);
+          setDayCount(prev => prev + 1);
+        }
+        setLastUsageDate(today);
+      }
+    };
+
+    checkNewDay();
+    const interval = setInterval(checkNewDay, 60000);
+    return () => clearInterval(interval);
+  }, [lastUsageDate, usagesLeft, dayCount]);
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -122,21 +139,64 @@ const QuitApp = () => {
     return segments;
   };
 
+  // Add bonus display component
+  const BonusDisplay = () => {
+    if (!showBonus) return null;
+
+    return (
+      <div className="bonus-overlay" onClick={() => setShowBonus(false)}>
+        <div className="bonus-card">
+          <div className="bonus-header">
+            <Star className="icon" />
+            <h2>Daglig Bonus!</h2>
+          </div>
+          <div className="bonus-content">
+            <p>Du klarade dig med {usagesLeft} färre snus igår!</p>
+            <div className="bonus-xp">+{bonusAmount} XP</div>
+          </div>
+          <Button onClick={() => setShowBonus(false)}>
+            Awesome!
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="container">
       <div className="app-wrapper">
-        <div className="stats-container">
+        <div className="stats-grid">
           <div className="stat-item">
-            <span className="stat-label">Day</span>
-            <span className="stat-value">{dayCount}</span>
+            <span className="stat-label">Dag</span>
+            <div className="stat-circle">
+              <div className="stat-content">
+                <span className="stat-value">{dayCount}</span>
+              </div>
+            </div>
           </div>
           <div className="stat-item">
-            <span className="stat-label">XP</span>
-            <span className="stat-value">{xpPoints}</span>
+            <span className="stat-label">Kvar</span>
+            <div className="stat-circle">
+              <div className="stat-content">
+                <span className="stat-value">{usagesLeft}</span>
+              </div>
+            </div>
           </div>
           <div className="stat-item">
             <span className="stat-label">Streak</span>
-            <span className="stat-value">{currentStreak}</span>
+            <div className="stat-circle">
+              <div className="stat-content">
+                <span className="stat-value">{currentStreak}</span>
+              </div>
+            </div>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">XP</span>
+            <div className="stat-circle">
+              <div className="stat-content">
+                <span className="stat-value">{xpPoints}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -154,18 +214,27 @@ const QuitApp = () => {
           </svg>
           <div className="circle-content">
             <div>
-              <div className="count">{usagesLeft}/{dailyLimit}</div>
-              <div className="label">kvar idag</div>
-              <Button
-                className="register-button"
-                onClick={handleUsage}
-                disabled={isRunning || usagesLeft === 0}
-              >
-                Registrera
-              </Button>
-              <div className="timer">
-                {timeLeft > 0 ? `Nästa om: ${formatTime(timeLeft)}` : 'Redo!'}
-              </div>
+              {timeLeft === null ? (
+                <>
+                  {usagesLeft > 0 ? (
+                    <Button
+                      className="register-button"
+                      onClick={handleUsage}
+                    >
+                      Registrera
+                    </Button>
+                  ) : (
+                    <div className="daily-limit-reached">
+                      Dagens gräns nådd
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="countdown">
+                  <div className="time">{formatTime(timeLeft)}</div>
+                  <div className="label">till nästa</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -179,18 +248,8 @@ const QuitApp = () => {
             Efter 24 timmar: Ditt blodtryck börjar normaliseras och risken för hjärtproblem minskar.
           </div>
         </div>
-
-        <div className="achievements-grid">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="achievement-card">
-              <Star className="icon" />
-              <div className="text">
-                {i === 0 ? '1 timme' : i === 1 ? '12 timmar' : '24 timmar'}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
+      <BonusDisplay />
     </div>
   );
 };
