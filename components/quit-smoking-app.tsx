@@ -15,6 +15,10 @@ interface AppState {
   canEarnXp: boolean;
 }
 
+const isSameDay = (date1: string, date2: string) => {
+  return date1 === date2;
+};
+
 const QuitApp = () => {
   const INITIAL_DAILY_LIMIT = 10;
   const WAKE_HOURS = 16;
@@ -65,16 +69,35 @@ const QuitApp = () => {
     localStorage.setItem('appState', JSON.stringify(state));
   }, [timeLeft, currentStreak, dayCount, dailyLimit, usagesLeft, xpPoints, lastUsageDate, canEarnXp]);
 
-  // Remove getWaitTime from component scope
+  // Add check for new day
+  useEffect(() => {
+    const today = new Date().toDateString();
+    if (!isSameDay(lastUsageDate, today)) {
+      // It's a new day
+      const newDailyLimit = Math.max(1, dailyLimit - 1); // Reduce by 1 but never below 1
+      setDailyLimit(newDailyLimit);
+      setUsagesLeft(newDailyLimit);
+      setDayCount(prev => prev + 1);
+      setLastUsageDate(today);
+      // Don't reset streak or XP as they should persist
+    }
+  }, [lastUsageDate, dailyLimit]);
+
+  // Update handleUsage to better handle streaks and XP
   const handleUsage = () => {
     if (usagesLeft > 0) {
       setUsagesLeft(prev => prev - 1);
       
-      if (canEarnXp) {
-        setXpPoints(prev => prev + XP_PER_WAIT);
-        setCurrentStreak(prev => prev + 1);
+      if (!timeLeft) {  // Only if timer is not running
+        if (canEarnXp && currentStreak > 0) {  // Only give XP if we have a streak
+          setXpPoints(prev => prev + XP_PER_WAIT);
+          setCurrentStreak(prev => prev + 1);
+        }
+        // Removed the else clause - don't set streak to 1 on first press
       } else {
+        // Reset streak if they use before timer is done
         setCurrentStreak(0);
+        setCanEarnXp(false);
       }
 
       const minutesBetweenUses = (WAKE_HOURS * 60) / dailyLimit;
@@ -83,12 +106,11 @@ const QuitApp = () => {
       
       localStorage.setItem('nextUsageTimestamp', nextUsageTimestamp.toString());
       setTimeLeft(waitTimeInSeconds);
-      setCanEarnXp(false);
       setLastUsageDate(new Date().toDateString());
     }
   };
 
-  // Update the timer useEffect to use timestamps
+  // Update the timer useEffect to better handle streaks
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -99,8 +121,10 @@ const QuitApp = () => {
         if (remainingTime > 0) {
           setTimeLeft(remainingTime);
         } else {
+          // Timer completed successfully
           setTimeLeft(null);
           setCanEarnXp(true);
+          // Don't reset streak here since they waited the full time
           localStorage.removeItem('nextUsageTimestamp');
           return;
         }
@@ -111,6 +135,7 @@ const QuitApp = () => {
           if (!current || current <= 1) {
             setCanEarnXp(true);
             localStorage.removeItem('nextUsageTimestamp');
+            // Don't reset streak here either
             return null;
           }
           return current - 1;
